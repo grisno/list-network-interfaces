@@ -1,5 +1,0 @@
-#!/bin/sh -
-
-for eth in `lspci -v | grep Ethernet | awk '{print $2}' | sed 's/Ethernet/eth/g' | sort`; do
-	echo $eth ; ifconfig $eth up
-done
