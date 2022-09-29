@@ -1,2 +1,2 @@
-# list-network-interfaces
-Sinology List Network Interfaces
+# Sinology List Network Interfaces
+Fix Sinology List Network Interfaces over ESXi Hypervisor
