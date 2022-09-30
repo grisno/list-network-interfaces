@@ -5,34 +5,31 @@ target="/etc.defaults/sysconfig/network-scripts"
 
 for i in `lspci -v | grep Ethernet | awk '{print $2}' | sed 's/Ethernet//g' | sort`; do
 	
-	#show interfaces eth$i
 	echo eth$i
 	
-	#enable interfaces eth$i
-	if ! `ifconfig eth$i > /dev/null 2>&1`; then
-		ifconfig eth$i up > /dev/null 2>&1
-	fi
+	ifconfig eth$i up > /dev/null 2>&1
 	
-	#save configuration interfaces eth$i
 	if [ -f "$source/ifcfg-eth$i" ]; then
 		cp -f $source/ifcfg-eth$i $target/ifcfg-eth$i.save > /dev/null 2>&1
 		chmod 644 $target/ifcfg-eth$i.save > /dev/null 2>&1
 	fi
 	
-	#save configuration interfaces bond$i
-	if `ifconfig bond$i > /dev/null 2>&1`; then
-		if [ -f "$source/ifcfg-bond$i" ]; then
-			cp -f "$source/ifcfg-bond$i" "$target/ifcfg-bond$i.save" > /dev/null 2>&1
-			chmod 644 $target/ifcfg-bond$i.save > /dev/null 2>&1
-		else
-			if [ -f "$target/ifcfg-bond$i.save" ]; then
-				rm -rf "$target/ifcfg-bond$i.save" > /dev/null 2>&1
-			fi
-		fi
+	if ! `ifconfig bond$i > /dev/null 2>&1`; then
+		rm -rf "$source/ifcfg-bond$i" > /dev/null 2>&1
+	fi
+	
+	if [ -f "$source/ifcfg-bond$i" ]; then
+		cp -f "$source/ifcfg-bond$i" "$target/ifcfg-bond$i.save" > /dev/null 2>&1
+		chmod 644 $target/ifcfg-bond$i.save > /dev/null 2>&1
 	else
-		if [ -f "$target/ifcfg-bond$i.save" ]; then
-			rm -rf "$target/ifcfg-bond$i.save" > /dev/null 2>&1
-		fi
+		rm -rf "$target/ifcfg-bond$i.save" > /dev/null 2>&1
 	fi
 	
 done
+
+config=/etc/rc.network
+if ! grep -q do_restore_config $config; then
+	cp -f $config $config.backup
+	sed -i "s/do_customize_setting()/\ndo_restore_config()\n{\n\tsource='\/etc.defaults\/sysconfig\/network-scripts'\n\ttarget='\/etc\/sysconfig\/network-scripts'\n\tfor fli in \`find \$source \| grep save\`; do\n\t\tflo=\`echo \$fli \| sed \'s\/\\\\\\.save\/\/g\' \| sed \'s\/\\\\\\.defaults\/\/g\'\`\n\t\tcp -f \$fli \$flo \> \/dev\/null 2\>\&1\n\tdone\n}\n\ndo_customize_setting()/g" $config
+	sed -i 's/start_network "\$\@"/do_restore_config\n    start_network "$@"/g' $config
+fi
