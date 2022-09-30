@@ -1,5 +1,38 @@
 #!/bin/sh -
 
-for eth in `lspci -v | grep Ethernet | awk '{print $2}' | sed 's/Ethernet/eth/g' | sort`; do
-	echo $eth ; ifconfig $eth up
+source="/etc/sysconfig/network-scripts"
+target="/etc.defaults/sysconfig/network-scripts"
+
+for i in `lspci -v | grep Ethernet | awk '{print $2}' | sed 's/Ethernet//g' | sort`; do
+	
+	#show interfaces eth$i
+	echo eth$i
+	
+	#enable interfaces eth$i
+	if ! `ifconfig eth$i > /dev/null 2>&1`; then
+		ifconfig eth$i up > /dev/null 2>&1
+	fi
+	
+	#save configuration interfaces eth$i
+	if [ -f "$source/ifcfg-eth$i" ]; then
+		cp -f $source/ifcfg-eth$i $target/ifcfg-eth$i.save > /dev/null 2>&1
+		chmod 644 $target/ifcfg-eth$i.save > /dev/null 2>&1
+	fi
+	
+	#save configuration interfaces bond$i
+	if `ifconfig bond$i > /dev/null 2>&1`; then
+		if [ -f "$source/ifcfg-bond$i" ]; then
+			cp -f "$source/ifcfg-bond$i" "$target/ifcfg-bond$i.save" > /dev/null 2>&1
+			chmod 644 $target/ifcfg-bond$i.save > /dev/null 2>&1
+		else
+			if [ -f "$target/ifcfg-bond$i.save" ]; then
+				rm -rf "$target/ifcfg-bond$i.save" > /dev/null 2>&1
+			fi
+		fi
+	else
+		if [ -f "$target/ifcfg-bond$i.save" ]; then
+			rm -rf "$target/ifcfg-bond$i.save" > /dev/null 2>&1
+		fi
+	fi
+	
 done
